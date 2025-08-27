@@ -3,7 +3,8 @@ build/
 dist/
 out/
 test/
-
+build_output/
+scripts/
 # Python cache files
 __pycache__/
 *.py[cod]
@@ -33,3 +34,4 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
