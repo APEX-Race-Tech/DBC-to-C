@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QFont, QSyntaxHighlighter, QTextCharFormat, QColor, QIcon
 from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QFont, QSyntaxHighlighter, QTextCharFormat, QColor, QIcon, QPixmap, QCursor
+from PyQt5.QtGui import QFont, QSyntaxHighlighter, QTextCharFormat, QColor, QIcon, QPixmap, QCursor, QPainter
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QFileDialog, QTextEdit, QLabel, QStatusBar, QMessageBox,
@@ -165,9 +165,35 @@ class MainWindow(QMainWindow):
         self.db = None
         
         # Set the application icon
-        icon_path = "apex_orange_ONLY LOGO.ico"
+        icon_path = "apex_orange_ONLY LOGO.png"
         if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+            try:
+                # Create properly sized icon to prevent stretching
+                icon_pixmap = QPixmap(icon_path)
+                if not icon_pixmap.isNull():
+                    # Create a 32x32 canvas with transparent background
+                    canvas = QPixmap(32, 32)
+                    canvas.fill(Qt.transparent)
+                    
+                    # Scale the logo maintaining aspect ratio
+                    scaled_logo = icon_pixmap.scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                    
+                    # Calculate center position
+                    x = (32 - scaled_logo.width()) // 2
+                    y = (32 - scaled_logo.height()) // 2
+                    
+                    # Paint the scaled logo onto the canvas
+                    painter = QPainter(canvas)
+                    painter.drawPixmap(x, y, scaled_logo)
+                    painter.end()
+                    
+                    self.setWindowIcon(QIcon(canvas))
+                else:
+                    print("Warning: Could not load icon pixmap")
+            except Exception as e:
+                print(f"Warning: Could not load icon: {e}")
+        else:
+            print(f"Warning: Icon file not found: {icon_path}")
         
         # --- Main Layout ---
         self.central_widget = QWidget()
@@ -218,6 +244,28 @@ class MainWindow(QMainWindow):
         splitter.setSizes([300, 400])  # Set initial size ratio
         self.layout.addWidget(splitter)
         
+        # --- Bottom Logo Section ---
+        logo_layout = QHBoxLayout()
+        logo_layout.setContentsMargins(0, 2, 8, 2)  # Left, Top, Right, Bottom margins - reduced
+        logo_layout.addStretch()  # Left spacing - pushes logo to right
+        
+        # Create clickable logo label
+        self.logo_label = QLabel()
+        logo_pixmap = QPixmap("apex_orange_ONLY LOGO.png")
+        if not logo_pixmap.isNull():
+            # Scale logo to larger size (max 45px height)
+            scaled_pixmap = logo_pixmap.scaled(45, 45, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.logo_label.setPixmap(scaled_pixmap)
+            self.logo_label.setCursor(QCursor(Qt.PointingHandCursor))
+            self.logo_label.setToolTip("Click to visit Apex Race Tech")
+            self.logo_label.mousePressEvent = self.open_website
+        else:
+            self.logo_label.setText("ART")
+            self.logo_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #FF6600;")
+        
+        logo_layout.addWidget(self.logo_label)
+        self.layout.addLayout(logo_layout)
+        
         # --- Status Bar ---
         self.setStatusBar(QStatusBar())
         
@@ -228,6 +276,16 @@ class MainWindow(QMainWindow):
         self.btn_debug.clicked.connect(self.debug_dbc)
         
         self.apply_stylesheet()
+
+    def open_website(self, event):
+        """Open Apex Race Tech website when logo is clicked."""
+        try:
+            from PyQt5.QtCore import QUrl
+            from PyQt5.QtGui import QDesktopServices
+            QDesktopServices.openUrl(QUrl("https://apexracetech.in/"))
+        except ImportError:
+            import webbrowser
+            webbrowser.open("https://apexracetech.in/")
 
     def debug_dbc(self):
         """Display debugging information about the loaded DBC file."""
@@ -288,14 +346,51 @@ class MainWindow(QMainWindow):
 
     def apply_stylesheet(self):
         self.setStyleSheet("""
-            QMainWindow { background-color: #2b2b2b; }
-            QWidget { background-color: #2b2b2b; color: #f0f0f0; font-size: 10pt; }
-            QLabel { font-weight: bold; }
-            QPushButton { background-color: #4a4a4a; padding: 8px; border-radius: 4px; }
-            QPushButton:hover { background-color: #5a5a5a; }
-            QPushButton:disabled { background-color: #333; color: #777; }
-            QTextEdit { background-color: #1e1e1e; border: 1px solid #444; }
-            QStatusBar { color: #bbbbbb; }
+            QMainWindow { 
+                background-color: #2b2b2b; 
+                border-radius: 12px;
+            }
+            QWidget { 
+                background-color: #2b2b2b; 
+                color: #f0f0f0; 
+                font-size: 10pt; 
+            }
+            QLabel { 
+                font-weight: bold; 
+                border-radius: 8px;
+            }
+            QPushButton { 
+                background-color: #4a4a4a; 
+                padding: 8px; 
+                border-radius: 8px; 
+                border: none;
+            }
+            QPushButton:hover { 
+                background-color: #5a5a5a; 
+                border-radius: 8px;
+            }
+            QPushButton:disabled { 
+                background-color: #333; 
+                color: #777; 
+                border-radius: 8px;
+            }
+            QTextEdit { 
+                background-color: #1e1e1e; 
+                border: 1px solid #444; 
+                border-radius: 8px;
+                padding: 8px;
+            }
+            QStatusBar { 
+                color: #bbbbbb; 
+                border-radius: 8px;
+            }
+            QSplitter::handle {
+                background-color: #444;
+                border-radius: 4px;
+            }
+            QSplitter::handle:hover {
+                background-color: #555;
+            }
         """)
 
     def select_dbc_file(self):
